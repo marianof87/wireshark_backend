@@ -77,6 +77,77 @@ describe("Aplicación HTTP · conducta heredada de la Unidad 1", () => {
   });
 });
 
+describe("Nuevos endpoints XP: GET /ping y POST /echo", () => {
+  let servidor: ServidorDePrueba;
+
+  beforeEach(async () => {
+    servidor = await levantar(crearAplicacion());
+  });
+
+  afterEach(async () => {
+    await servidor.cerrar();
+  });
+
+  it("responde 200 y { ping: 'pong' } en GET /ping", async () => {
+    const respuesta = await servidor.pedir("/ping");
+
+    expect(respuesta.status).toBe(200);
+    expect(await respuesta.json()).toEqual({ ping: "pong" });
+  });
+
+  it("responde 200 y devuelve el mismo cuerpo en POST /echo", async () => {
+    const cuerpoPeticion = { mensaje: "hola TDD" };
+    const respuesta = await servidor.pedir("/echo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpoPeticion)
+    });
+
+    expect(respuesta.status).toBe(200);
+    expect(await respuesta.json()).toEqual(cuerpoPeticion);
+  });
+});
+
+describe("POST /estudiantes (XP Phase)", () => {
+  let servidor: ServidorDePrueba;
+
+  beforeEach(async () => {
+    servidor = await levantar(crearAplicacion());
+  });
+
+  afterEach(async () => {
+    await servidor.cerrar();
+  });
+
+  it("debe responder 201 Created y retornar el estudiante creado con su id asignado", async () => {
+    const nuevoEstudiante = { nombre: "Mariano Capella", activo: true };
+
+    const respuesta = await servidor.pedir("/estudiantes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevoEstudiante)
+    });
+
+    const datos = (await respuesta.json()) as any;
+
+    expect(respuesta.status).toBe(201);
+    expect(datos.nombre).toBe("Mariano Capella");
+    expect(datos.activo).toBe(true);
+    expect(typeof datos.id).toBe("number");
+  });
+
+  it("debe responder 400 Bad Request si faltan datos requeridos", async () => {
+    const respuesta = await servidor.pedir("/estudiantes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}) // Cuerpo sin nombre
+    });
+
+    expect(respuesta.status).toBe(400);
+    expect(await respuesta.json()).toEqual({ error: "El campo 'nombre' es requerido" });
+  });
+});
+
 /**
  * Pruebas de integración de la historia nueva: recorren el contrato completo
  * —ruta, método, cuerpo, código de estado— sin conocer cómo está implementado

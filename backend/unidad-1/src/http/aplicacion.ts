@@ -39,12 +39,16 @@ const RESPUESTA_POR_MOTIVO: Record<MotivoRechazo, { codigo: number; error: strin
  * contestar `OPTIONS` sin repetir las reglas en otro lugar.
  */
 const RUTAS: ReadonlyArray<{ patron: RegExp; metodos: readonly string[] }> = [
+  { patron: /^\/$/, metodos: ["GET", "HEAD"] },
   { patron: /^\/salud$/, metodos: ["GET", "HEAD"] },
   { patron: /^\/hora$/, metodos: ["GET", "HEAD"] },
   { patron: /^\/materias$/, metodos: ["GET", "HEAD"] },
   { patron: /^\/estudiantes\/[^/]+$/, metodos: ["GET", "HEAD"] },
   { patron: /^\/estudiantes\/[^/]+\/inscripciones$/, metodos: ["GET", "HEAD"] },
-  { patron: /^\/inscripciones$/, metodos: ["POST"] }
+  { patron: /^\/estudiantes$/, metodos: ["POST"] },
+  { patron: /^\/inscripciones$/, metodos: ["POST"] },
+  { patron: /^\/ping$/, metodos: ["GET", "HEAD"] },
+  { patron: /^\/echo$/, metodos: ["POST"] }
 ];
 
 export function crearAplicacion(opciones: OpcionesAplicacion = {}): RequestListener {
@@ -106,9 +110,21 @@ export function crearAplicacion(opciones: OpcionesAplicacion = {}): RequestListe
       }
     }
 
+    // GET /
+    if (metodo === "GET" && partes.length === 0) {
+      responder(200, { mensaje: "API funcionando correctamente. Prueba con /salud, /ping o /materias." });
+      return;
+    }
+
     // GET /salud
     if (metodo === "GET" && partes.length === 1 && partes[0] === "salud") {
       responder(200, { estado: "ok", fecha: reloj().toISOString() });
+      return;
+    }
+
+    // GET /ping
+    if (metodo === "GET" && partes.length === 1 && partes[0] === "ping") {
+      responder(200, { ping: "pong" });
       return;
     }
 
@@ -161,6 +177,47 @@ export function crearAplicacion(opciones: OpcionesAplicacion = {}): RequestListe
         );
         return;
       }
+    }
+
+    // POST /echo
+    if (metodo === "POST" && partes.length === 1 && partes[0] === "echo") {
+      let cuerpo: unknown;
+
+      try {
+        cuerpo = await leerJson(solicitud);
+      } catch {
+        responder(400, { error: "El cuerpo no es JSON válido" });
+        return;
+      }
+
+      responder(200, cuerpo);
+      return;
+    }
+
+    // POST /estudiantes
+    if (metodo === "POST" && partes.length === 1 && partes[0] === "estudiantes") {
+      let cuerpo: any;
+
+      try {
+        cuerpo = await leerJson(solicitud);
+      } catch {
+        responder(400, { error: "JSON inválido" });
+        return;
+      }
+
+      if (!cuerpo.nombre) {
+        responder(400, { error: "El campo 'nombre' es requerido" });
+        return;
+      }
+
+      const nuevoEstudiante = {
+        id: Math.floor(Math.random() * 1000) + 1,
+        nombre: cuerpo.nombre,
+        activo: cuerpo.activo ?? true
+      };
+
+      responder(201, nuevoEstudiante);
+      return;
     }
 
     // POST /inscripciones
