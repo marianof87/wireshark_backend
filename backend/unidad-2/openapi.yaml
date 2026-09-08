@@ -1,0 +1,378 @@
+openapi: 3.1.0
+info:
+  title: API CRUD - Proyectos y Tareas
+  version: 2.0.0
+  description: >-
+    API REST modular sobre Express, TypeScript y Prisma ORM (SQLite). Arquitectura
+    por capas: Router -> Controller -> Service -> Repository -> Prisma.
+    Contrato de error uniforme `{ error: { code, message, details } }`.
+    Documentación interactiva disponible en `/api/v1/docs` (Swagger UI) y el
+    spec en crudo en `/api/v1/docs/openapi.yaml`.
+servers:
+  - url: http://localhost:3000/api/v1
+tags:
+  - name: Sistema
+    description: Estado y utilidades de la API.
+  - name: Proyectos
+    description: CRUD de proyectos (agrupadores de tareas).
+  - name: Tareas
+    description: CRUD de tareas, cada una pertenece a un proyecto.
+paths:
+  /salud:
+    get:
+      tags: [Sistema]
+      summary: Verificar que la API responde
+      responses:
+        "200":
+          description: La API está operativa
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Salud" }
+  /proyectos:
+    get:
+      tags: [Proyectos]
+      summary: Listar proyectos
+      responses:
+        "200":
+          description: Listado de proyectos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Proyecto" }
+    post:
+      tags: [Proyectos]
+      summary: Crear un proyecto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CrearProyecto" }
+      responses:
+        "201":
+          description: Proyecto creado (cabecera Location con su URI)
+          headers:
+            Location:
+              description: URI del recurso creado
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Proyecto" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "422":
+          $ref: "#/components/responses/Error422"
+  /proyectos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador numérico del proyecto
+        schema: { type: integer, minimum: 1 }
+    get:
+      tags: [Proyectos]
+      summary: Buscar un proyecto por Id
+      responses:
+        "200":
+          description: Proyecto encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Proyecto" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+    put:
+      tags: [Proyectos]
+      summary: Reemplazar un proyecto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CrearProyecto" }
+      responses:
+        "200":
+          description: Proyecto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Proyecto" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "422":
+          $ref: "#/components/responses/Error422"
+    patch:
+      tags: [Proyectos]
+      summary: Modificar parcialmente un proyecto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActualizarProyecto" }
+      responses:
+        "200":
+          description: Proyecto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Proyecto" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "422":
+          $ref: "#/components/responses/Error422"
+    delete:
+      tags: [Proyectos]
+      summary: Eliminar un proyecto (elimina sus tareas en cascada)
+      responses:
+        "204":
+          description: Proyecto eliminado sin cuerpo
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+  /tareas:
+    get:
+      tags: [Tareas]
+      summary: Listar tareas con filtros, búsqueda y paginación
+      parameters:
+        - name: page
+          in: query
+          description: Página solicitada (por defecto 1)
+          schema: { type: integer, minimum: 1 }
+        - name: limit
+          in: query
+          description: Elementos por página (1..100, por defecto 50)
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: q
+          in: query
+          description: Búsqueda textual sobre el título
+          schema: { type: string }
+        - name: completada
+          in: query
+          description: Filtro por estado
+          schema: { type: boolean }
+        - name: proyectoId
+          in: query
+          description: Filtro por proyecto
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Listado paginado de tareas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Tarea" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+    post:
+      tags: [Tareas]
+      summary: Crear una tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CrearTarea" }
+      responses:
+        "201":
+          description: Tarea creada (cabecera Location con su URI)
+          headers:
+            Location:
+              description: URI del recurso creado
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Tarea" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "422":
+          $ref: "#/components/responses/Error422"
+  /tareas/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Identificador numérico de la tarea
+        schema: { type: integer, minimum: 1 }
+    get:
+      tags: [Tareas]
+      summary: Buscar una tarea por Id
+      responses:
+        "200":
+          description: Tarea encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Tarea" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+    put:
+      tags: [Tareas]
+      summary: Reemplazar una tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CrearTarea" }
+      responses:
+        "200":
+          description: Tarea actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Tarea" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "422":
+          $ref: "#/components/responses/Error422"
+    patch:
+      tags: [Tareas]
+      summary: Modificar parcialmente una tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActualizarTarea" }
+      responses:
+        "200":
+          description: Tarea actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Tarea" }
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "422":
+          $ref: "#/components/responses/Error422"
+    delete:
+      tags: [Tareas]
+      summary: Eliminar una tarea
+      responses:
+        "204":
+          description: Tarea eliminada sin cuerpo
+        "400":
+          $ref: "#/components/responses/Error400"
+        "404":
+          $ref: "#/components/responses/Error404"
+components:
+  schemas:
+    Salud:
+      type: object
+      required: [estado, fecha]
+      properties:
+        estado: { type: string, enum: [ok] }
+        fecha: { type: string, format: date-time }
+    Proyecto:
+      type: object
+      required: [id, nombre, descripcion, fechaCreacion]
+      properties:
+        id: { type: integer, readOnly: true }
+        nombre: { type: string, minLength: 3 }
+        descripcion: { type: string }
+        fechaCreacion: { type: string, format: date-time, readOnly: true }
+    CrearProyecto:
+      type: object
+      required: [nombre]
+      properties:
+        nombre: { type: string, minLength: 3 }
+        descripcion: { type: string }
+    ActualizarProyecto:
+      type: object
+      properties:
+        nombre: { type: string, minLength: 3 }
+        descripcion: { type: string }
+    Tarea:
+      type: object
+      required: [id, proyectoId, titulo, prioridad, completada, fechaCreacion]
+      properties:
+        id: { type: integer, readOnly: true }
+        proyectoId: { type: integer }
+        titulo: { type: string, minLength: 3 }
+        prioridad: { type: string, enum: [baja, media, alta] }
+        completada: { type: boolean }
+        fechaCreacion: { type: string, format: date-time, readOnly: true }
+    CrearTarea:
+      type: object
+      required: [proyectoId, titulo, prioridad]
+      properties:
+        proyectoId: { type: integer }
+        titulo: { type: string, minLength: 3 }
+        prioridad: { type: string, enum: [baja, media, alta] }
+    ActualizarTarea:
+      type: object
+      properties:
+        titulo: { type: string, minLength: 3 }
+        prioridad: { type: string, enum: [baja, media, alta] }
+        completada: { type: boolean }
+    Meta:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code: { type: string, example: "INVALID_NAME" }
+            message: { type: string }
+            details: { type: array, items: {} }
+  responses:
+    Error400:
+      description: Petición malformada (cuerpo inválido o identificador incorrecto)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error404:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Error422:
+      description: Datos válidos en forma pero que incumplen las reglas de negocio
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

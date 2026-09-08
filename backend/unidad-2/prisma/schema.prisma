@@ -1,0 +1,36 @@
+// Prisma schema — Unidad 2: CRUD de Proyectos y Tareas sobre SQLite.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Un proyecto agrupa tareas (relación 1 → N).
+model Proyecto {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  descripcion   String   @default("")
+  fechaCreacion DateTime @default(now())
+  tareas        Tarea[]
+}
+
+/// Una tarea pertenece a un proyecto; se borra en cascada con él.
+model Tarea {
+  id            Int       @id @default(autoincrement())
+  proyectoId    Int
+  titulo        String
+  prioridad     Prioridad
+  completada    Boolean   @default(false)
+  fechaCreacion DateTime  @default(now())
+  proyecto      Proyecto  @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+}
+
+enum Prioridad {
+  baja
+  media
+  alta
+}

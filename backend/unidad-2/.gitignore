@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+.env
+
+# Base de datos local de SQLite (gestión Prisma)
+prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+
+# Bases temporales de las pruebas de integración
+prisma/prueba-*
+
+# Base de datos legacy (mejor-sqlite3, ya no se usa)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
